@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101114">
+  <meta name="description" content="A simple personal dashboard for your important links.">
+  <title>My links</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101114;
+      --surface: #181a20;
+      --surface-raised: #20232b;
+      --text: #f3f4f6;
+      --muted: #a4a8b3;
+      --line: #2b2e37;
+      --accent: #a78bfa;
+      --accent-soft: rgba(167, 139, 250, .13);
+      --danger: #ff8585;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .18);
+    }
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f5f6fa;
+      --surface: #fff;
+      --surface-raised: #f0f1f6;
+      --text: #20212a;
+      --muted: #686c79;
+      --line: #e3e5ec;
+      --accent: #704bd1;
+      --accent-soft: rgba(112, 75, 209, .1);
+      --danger: #bc3030;
+      --shadow: 0 18px 50px rgba(43, 42, 59, .08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      transition: background .2s ease, color .2s ease;
+    }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    a { color: inherit; }
+    .shell { width: min(1050px, calc(100% - 40px)); margin: 0 auto; }
+    header { padding: 48px 0 30px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 11px; color: var(--muted); font-size: 13px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+    .brand-mark { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid var(--line); border-radius: 10px; color: var(--accent); background: var(--surface); }
+    .top-actions { display: flex; gap: 9px; }
+    .icon-button, .button, .small-button {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text);
+      cursor: pointer; transition: background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+    .icon-button { width: 40px; height: 40px; font-size: 17px; }
+    .button { min-height: 40px; padding: 0 14px; font-weight: 650; }
+    .small-button { min-height: 32px; padding: 0 10px; font-size: 13px; }
+    .icon-button:hover, .button:hover, .small-button:hover { background: var(--surface-raised); border-color: var(--accent); }
+    button:active { transform: translateY(1px); }
+    button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .hero { padding: 42px 0 27px; }
+    .eyebrow { margin: 0 0 9px; color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(32px, 6vw, 48px); line-height: 1.12; letter-spacing: -.045em; }
+    .datetime { display: flex; flex-wrap: wrap; gap: 8px 13px; margin: 13px 0 0; color: var(--muted); font-size: 15px; }
+    .search-wrap { position: relative; margin-top: 27px; }
+    .search-icon { position: absolute; top: 50%; left: 17px; color: var(--muted); transform: translateY(-50%); pointer-events: none; }
+    #search { width: 100%; height: 54px; padding: 0 80px 0 47px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+    #search::placeholder { color: var(--muted); opacity: .8; }
+    .shortcut { position: absolute; top: 50%; right: 14px; padding: 2px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 12px; transform: translateY(-50%); }
+    .edit-tools { display: none; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 11px; margin: 18px 0 23px; padding: 13px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); }
+    .edit-tools.visible { display: flex; }
+    .edit-note { color: var(--muted); font-size: 13px; }
+    .tool-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .primary:hover { background: var(--accent); filter: brightness(1.08); }
+    main { min-height: 270px; padding-bottom: 65px; }
+    #categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px; align-items: start; }
+    .category { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); animation: appear .28s ease both; }
+    .category-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 18px 12px; }
+    .category-title { display: flex; align-items: center; gap: 9px; min-width: 0; margin: 0; font-size: 15px; font-weight: 720; letter-spacing: -.01em; }
+    .category-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--accent); }
+    .category-count { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 500; }
+    .category-controls, .link-controls { display: none; gap: 5px; }
+    .editing .category-controls, .editing .link-controls { display: flex; }
+    .mini { width: 29px; height: 29px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+    .mini:hover { border-color: var(--accent); color: var(--text); }
+    .mini.delete:hover { border-color: var(--danger); color: var(--danger); }
+    .link-list { padding: 0 9px 10px; }
+    .link-row { display: flex; align-items: center; min-height: 56px; gap: 11px; padding: 8px 9px; border-radius: 11px; transition: background .16s ease, transform .16s ease; }
+    .link-row:hover { background: var(--surface-raised); transform: translateX(2px); }
+    .link-row[hidden] { display: none; }
+    .link-anchor { display: flex; align-items: center; min-width: 0; flex: 1; gap: 11px; text-decoration: none; }
+    .favicon { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); }
+    .favicon img { width: 19px; height: 19px; object-fit: contain; }
+    .favicon-fallback { color: var(--accent); font-size: 14px; font-weight: 750; }
+    .link-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 570; }
+    .link-row:hover .link-text { color: var(--accent); }
+    .external { color: var(--muted); font-size: 12px; }
+    .link-controls { flex: 0 0 auto; }
+    .add-link { width: calc(100% - 18px); margin: 0 9px 10px; border-style: dashed; color: var(--muted); }
+    #empty-state { display: none; padding: 50px 20px; color: var(--muted); text-align: center; }
+    #empty-state strong { display: block; margin-bottom: 5px; color: var(--text); font-size: 17px; }
+    footer { display: flex; justify-content: space-between; gap: 12px; padding: 21px 0 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+    dialog { width: min(440px, calc(100% - 30px)); padding: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--text); box-shadow: 0 24px 80px rgba(0, 0, 0, .35); }
+    dialog::backdrop { background: rgba(5, 6, 10, .68); backdrop-filter: blur(3px); }
+    .dialog-inner { padding: 22px; }
+    .dialog-inner h2 { margin: 0 0 18px; font-size: 19px; }
+    .field { display: grid; gap: 6px; margin-bottom: 14px; }
+    .field label { color: var(--muted); font-size: 13px; font-weight: 650; }
+    .field input { width: 100%; height: 42px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg); color: var(--text); }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .toast { position: fixed; right: 20px; bottom: 20px; z-index: 3; max-width: calc(100% - 40px); padding: 11px 15px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow); opacity: 0; pointer-events: none; transform: translateY(8px); transition: .2s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @keyframes appear { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 28px, 520px); }
+      header { padding-top: 25px; }
+      .hero { padding-top: 34px; }
+      #categories { grid-template-columns: 1fr; gap: 13px; }
+      .edit-tools { align-items: flex-start; }
+      .tool-actions { width: 100%; }
+      .tool-actions .button { flex: 1; }
+      footer { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="topbar">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">✳</span> Personal dashboard</div>
+        <div class="top-actions">
+          <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch to light theme" title="Toggle theme">☼</button>
+          <button class="button" id="edit-toggle" type="button" aria-pressed="false">✎ <span>Edit</span></button>
+        </div>
+      </div>
+      <section class="hero" aria-labelledby="greeting">
+        <p class="eyebrow" id="greeting">Good day</p>
+        <h1>Your corner of the internet.</h1>
+        <p class="datetime"><time id="clock"></time><span aria-hidden="true">·</span><span id="date"></span></p>
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="search" type="search" placeholder="Search your links…" aria-label="Search links" autocomplete="off">
+          <span class="shortcut" aria-hidden="true">/</span>
+        </div>
+      </section>
+      <section class="edit-tools" id="edit-tools" aria-label="Link editing tools">
+        <span class="edit-note">Changes save automatically on this device.</span>
+        <div class="tool-actions">
+          <button class="button primary" id="add-category" type="button">＋ Category</button>
+          <button class="button" id="export-data" type="button">↓ Export</button>
+          <button class="button" id="import-data" type="button">↑ Import</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden>
+        </div>
+      </section>
+    </header>
+
+    <main>
+      <div id="categories" aria-live="polite"></div>
+      <div id="empty-state"><strong>No links found</strong>Try a different search, or add a link in Edit mode.</div>
+    </main>
+
+    <footer><span>Made for the things you use every day.</span><a href="https://pages.github.com/" target="_blank" rel="noopener noreferrer">Hosted with GitHub Pages ↗</a></footer>
+  </div>
+  <dialog id="editor" aria-labelledby="dialog-title">
+    <form class="dialog-inner" id="editor-form">
+      <h2 id="dialog-title">Add link</h2>
+      <div class="field"><label for="item-title">Title</label><input id="item-title" name="title" required maxlength="80" autocomplete="off"></div>
+      <div class="field"><label for="item-url">URL</label><input id="item-url" name="url" type="url" required placeholder="https://example.com" autocomplete="url"></div>
+      <div class="dialog-actions"><button class="button" id="cancel-dialog" type="button">Cancel</button><button class="button primary" type="submit">Save link</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    /* EDIT YOUR LINKS HERE: Categories contain a name and a links array. */
+    const DEFAULT_LINKS = [
+      { name: "Work", links: [
+        { title: "Gmail", url: "https://mail.google.com/" },
+        { title: "Google Drive", url: "https://drive.google.com/" },
+        { title: "GitHub", url: "https://github.com/" }
+      ] },
+      { name: "Social", links: [
+        { title: "Reddit", url: "https://www.reddit.com/" },
+        { title: "LinkedIn", url: "https://www.linkedin.com/" }
+      ] },
+      { name: "Tools", links: [
+        { title: "Calendar", url: "https://calendar.google.com/" },
+        { title: "ChatGPT", url: "https://chatgpt.com/" }
+      ] },
+      { name: "Learning", links: [
+        { title: "MDN Web Docs", url: "https://developer.mozilla.org/" },
+        { title: "freeCodeCamp", url: "https://www.freecodecamp.org/" }
+      ] }
+    ];
+
+    const DATA_KEY = "personal-links-data-v1";
+    const THEME_KEY = "personal-links-theme-v1";
+    const categoriesEl = document.getElementById("categories");
+    const searchEl = document.getElementById("search");
+    const editTools = document.getElementById("edit-tools");
+    const dialog = document.getElementById("editor");
+    const form = document.getElementById("editor-form");
+    let linksData = loadData();
+    let editing = false;
+    let editTarget = null;
+    let toastTimer;
+
+    function cloneDefaults() { return JSON.parse(JSON.stringify(DEFAULT_LINKS)); }
+    function validUrl(value) {
+      try { const url = new URL(value); return url.protocol === "https:" || url.protocol === "http:"; }
+      catch { return false; }
+    }
+    function normalizeData(value) {
+      if (!Array.isArray(value)) throw new Error("Backup must contain an array of categories.");
+      return value.map(category => {
+        if (!category || typeof category.name !== "string" || !Array.isArray(category.links)) throw new Error("Each category needs a name and links array.");
+        return {
+          name: category.name.trim().slice(0, 60) || "Untitled",
+          links: category.links.map(link => {
+            if (!link || typeof link.title !== "string" || typeof link.url !== "string" || !validUrl(link.url)) throw new Error("Each link needs a title and a valid http(s) URL.");
+            return { title: link.title.trim().slice(0, 80) || "Untitled", url: link.url.trim() };
+          })
+        };
+      });
+    }
+    function loadData() {
+      try { const saved = localStorage.getItem(DATA_KEY); return saved ? normalizeData(JSON.parse(saved)) : cloneDefaults(); }
+      catch { return cloneDefaults(); }
+    }
+    function saveData() {
+      try { localStorage.setItem(DATA_KEY, JSON.stringify(linksData)); }
+      catch { notify("Could not save. Check your browser storage settings."); }
+    }
+    function makeButton(label, title, action, extraClass = "") {
+      const button = document.createElement("button");
+      button.type = "button"; button.className = `mini ${extraClass}`; button.textContent = label; button.title = title; button.setAttribute("aria-label", title); button.addEventListener("click", action);
+      return button;
+    }
+    function render() {
+      categoriesEl.replaceChildren();
+      const query = searchEl.value.trim().toLocaleLowerCase();
+      let visibleCount = 0;
+      linksData.forEach((category, categoryIndex) => {
+        const matchingLinks = category.links.map((link, index) => ({ link, index })).filter(item => !query || `${item.link.title} ${item.link.url} ${category.name}`.toLocaleLowerCase().includes(query));
+        if (query && matchingLinks.length === 0) return;
+        visibleCount += matchingLinks.length;
+        const card = document.createElement("section"); card.className = "category"; card.setAttribute("aria-label", category.name);
+        const head = document.createElement("div"); head.className = "category-head";
+        const title = document.createElement("h2"); title.className = "category-title";
+        const dot = document.createElement("span"); dot.className = "category-dot"; dot.setAttribute("aria-hidden", "true");
+        const titleText = document.createElement("span"); titleText.textContent = category.name;
+        const count = document.createElement("span"); count.className = "category-count"; count.textContent = category.links.length;
+        title.append(dot, titleText, count); head.append(title);
+        const controls = document.createElement("div"); controls.className = "category-controls";
+        controls.append(
+          makeButton("↑", "Move category up", () => moveCategory(categoryIndex, -1)),
+          makeButton("↓", "Move category down", () => moveCategory(categoryIndex, 1)),
+          makeButton("✎", "Rename category", () => renameCategory(categoryIndex)),
+          makeButton("×", "Delete category", () => deleteCategory(categoryIndex), "delete")
+        );
+        head.append(controls); card.append(head);
+        const list = document.createElement("div"); list.className = "link-list";
+        matchingLinks.forEach(({ link, index }) => {
+          const row = document.createElement("div"); row.className = "link-row";
+          const anchor = document.createElement("a"); anchor.className = "link-anchor"; anchor.href = link.url; anchor.target = "_blank"; anchor.rel = "noopener noreferrer"; anchor.title = link.url;
+          const favicon = document.createElement("span"); favicon.className = "favicon"; favicon.setAttribute("aria-hidden", "true");
+          const image = document.createElement("img");
+          const domain = new URL(link.url).hostname;
+          image.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`; image.alt = ""; image.loading = "lazy";
+          image.addEventListener("error", () => { favicon.replaceChildren(); const fallback = document.createElement("span"); fallback.className = "favicon-fallback"; fallback.textContent = link.title.charAt(0).toUpperCase(); favicon.append(fallback); }, { once: true });
+          favicon.append(image);
+          const text = document.createElement("span"); text.className = "link-text"; text.textContent = link.title;
+          const external = document.createElement("span"); external.className = "external"; external.textContent = "↗"; external.setAttribute("aria-hidden", "true");
+          anchor.append(favicon, text, external); row.append(anchor);
+          const linkControls = document.createElement("div"); linkControls.className = "link-controls";
+          linkControls.append(
+            makeButton("↑", "Move link up", () => moveLink(categoryIndex, index, -1)),
+            makeButton("↓", "Move link down", () => moveLink(categoryIndex, index, 1)),
+            makeButton("✎", "Edit link", () => openLinkDialog(categoryIndex, index)),
+            makeButton("×", "Delete link", () => deleteLink(categoryIndex, index), "delete")
+          );
+          row.append(linkControls); list.append(row);
+        });
+        card.append(list);
+        if (editing) {
+          const add = document.createElement("button"); add.type = "button"; add.className = "small-button add-link"; add.textContent = "＋ Add a link"; add.addEventListener("click", () => openLinkDialog(categoryIndex)); card.append(add);
+        }
+        categoriesEl.append(card);
+      });
+      document.getElementById("empty-state").style.display = visibleCount === 0 ? "block" : "none";
+      document.body.classList.toggle("editing", editing);
+    }
+    function persistAndRender() { saveData(); render(); }
+    function moveCategory(index, direction) {
+      const target = index + direction; if (target < 0 || target >= linksData.length) return;
+      [linksData[index], linksData[target]] = [linksData[target], linksData[index]]; persistAndRender();
+    }
+    function moveLink(categoryIndex, index, direction) {
+      const list = linksData[categoryIndex].links; const target = index + direction;
+      if (target < 0 || target >= list.length) return;
+      [list[index], list[target]] = [list[target], list[index]]; persistAndRender();
+    }
+    function renameCategory(index) {
+      const name = prompt("Category name:", linksData[index].name);
+      if (name === null) return;
+      if (!name.trim()) return notify("Category name cannot be empty.");
+      linksData[index].name = name.trim().slice(0, 60); persistAndRender();
+    }
+    function deleteCategory(index) {
+      if (!confirm(`Delete “${linksData[index].name}” and all its links?`)) return;
+      linksData.splice(index, 1); persistAndRender();
+    }
+    function deleteLink(categoryIndex, index) {
+      const link = linksData[categoryIndex].links[index];
+      if (!confirm(`Delete “${link.title}”?`)) return;
+      linksData[categoryIndex].links.splice(index, 1); persistAndRender();
+    }
+    function addCategory() {
+      const name = prompt("New category name:");
+      if (name === null) return;
+      if (!name.trim()) return notify("Category name cannot be empty.");
+      linksData.push({ name: name.trim().slice(0, 60), links: [] }); persistAndRender();
+    }
+    function openLinkDialog(categoryIndex, linkIndex = null) {
+      editTarget = { categoryIndex, linkIndex };
+      const existing = linkIndex === null ? null : linksData[categoryIndex].links[linkIndex];
+      document.getElementById("dialog-title").textContent = existing ? "Edit link" : "Add link";
+      form.elements.title.value = existing ? existing.title : "";
+      form.elements.url.value = existing ? existing.url : "";
+      dialog.showModal(); document.getElementById("item-title").focus();
+    }
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const title = form.elements.title.value.trim(); const url = form.elements.url.value.trim();
+      if (!validUrl(url)) { form.elements.url.setCustomValidity("Use a valid http:// or https:// URL."); form.elements.url.reportValidity(); return; }
+      form.elements.url.setCustomValidity("");
+      const { categoryIndex, linkIndex } = editTarget;
+      if (linkIndex === null) linksData[categoryIndex].links.push({ title, url });
+      else linksData[categoryIndex].links[linkIndex] = { title, url };
+      dialog.close(); persistAndRender(); notify("Link saved.");
+    });
+    document.getElementById("cancel-dialog").addEventListener("click", () => dialog.close());
+    document.getElementById("add-category").addEventListener("click", addCategory);
+    document.getElementById("edit-toggle").addEventListener("click", event => {
+      editing = !editing; editTools.classList.toggle("visible", editing);
+      event.currentTarget.setAttribute("aria-pressed", String(editing)); event.currentTarget.querySelector("span").textContent = editing ? "Done" : "Edit";
+      render();
+    });
+    document.getElementById("export-data").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(linksData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = "my-links.json"; anchor.click(); URL.revokeObjectURL(url); notify("Backup exported.");
+    });
+    const importInput = document.getElementById("import-file");
+    document.getElementById("import-data").addEventListener("click", () => importInput.click());
+    importInput.addEventListener("change", async () => {
+      const file = importInput.files[0]; if (!file) return;
+      try {
+        const imported = normalizeData(JSON.parse(await file.text()));
+        if (!confirm("Replace your current links with the imported backup?")) return;
+        linksData = imported; persistAndRender(); notify("Backup imported.");
+      } catch (error) { notify(error.message || "Could not read that backup."); }
+      finally { importInput.value = ""; }
+    });
+    searchEl.addEventListener("input", render);
+    document.addEventListener("keydown", event => {
+      if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { event.preventDefault(); searchEl.focus(); }
+      if (event.key === "Escape" && document.activeElement === searchEl) { searchEl.value = ""; render(); searchEl.blur(); }
+      if (event.key === "Enter" && document.activeElement === searchEl) {
+        const first = categoriesEl.querySelector(".link-anchor"); if (first) { event.preventDefault(); window.open(first.href, "_blank", "noopener,noreferrer"); }
+      }
+    });
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      const dark = theme === "dark";
+      document.getElementById("theme-toggle").textContent = dark ? "☼" : "☾";
+      document.getElementById("theme-toggle").setAttribute("aria-label", `Switch to ${dark ? "light" : "dark"} theme`);
+      document.querySelector('meta[name="theme-color"]').content = dark ? "#101114" : "#f5f6fa";
+    }
+    const storedTheme = localStorage.getItem(THEME_KEY);
+    setTheme(storedTheme || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      setTheme(next); localStorage.setItem(THEME_KEY, next);
+    });
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("clock").textContent = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(now);
+      document.getElementById("clock").dateTime = now.toISOString();
+      document.getElementById("date").textContent = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(now);
+      const hour = now.getHours(); document.getElementById("greeting").textContent = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    }
+    function notify(message) {
+      const toast = document.getElementById("toast"); toast.textContent = message; toast.classList.add("show");
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove("show"), 2800);
+    }
+    updateClock(); setInterval(updateClock, 30_000); render();
+  </script>
+</body>
+</html>
