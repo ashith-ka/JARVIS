@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101114">
+  <meta name="description" content="See which stores at Macquarie Centre are open right now.">
+  <title>Mac Centre · What's open now?</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101114; --surface:#181a20; --raised:#20232b; --text:#f3f4f6; --muted:#a4a8b3; --line:#2b2e37; --accent:#a78bfa; --shadow:0 18px 50px rgba(0,0,0,.18); }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; background:var(--bg); color:var(--text); font:15px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    a { color:inherit; }
+    button { font:inherit; }
+    .shell { width:min(850px,calc(100% - 36px)); margin:0 auto; }
+    header { padding:28px 0 34px; }
+    .home { display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:14px; text-decoration:none; }
+    .home:hover { color:var(--accent); }
+    .eyebrow { margin:38px 0 8px; color:var(--accent); font-size:13px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(34px,7vw,54px); line-height:1.08; letter-spacing:-.045em; }
+    .status { min-height:28px; margin:17px 0 21px; color:var(--muted); font-size:16px; font-weight:600; }
+    .status.open { color:#74d6a0; }
+    .status.closed { color:var(--muted); }
+    .check-button { display:flex; width:100%; min-height:76px; align-items:center; justify-content:center; gap:12px; border:1px solid var(--accent); border-radius:16px; background:var(--accent); color:#fff; font-size:19px; font-weight:750; cursor:pointer; box-shadow:0 10px 35px rgba(167,139,250,.15); transition:transform .16s ease,filter .16s ease; }
+    .check-button:hover { filter:brightness(1.08); transform:translateY(-2px); }
+    .check-button:active { transform:translateY(0); }
+    .check-button:focus-visible,.home:focus-visible { outline:3px solid var(--text); outline-offset:4px; }
+    main { padding-bottom:60px; }
+    .store-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(145px,1fr)); gap:13px; margin-top:22px; }
+    .store-tile { display:flex; min-height:164px; flex-direction:column; align-items:center; justify-content:center; gap:15px; padding:16px 10px; border:1px solid var(--line); border-radius:16px; background:var(--surface); box-shadow:var(--shadow); animation:pop .22s ease both; }
+    .logo-wrap { display:grid; width:88px; height:88px; place-items:center; overflow:hidden; border:1px solid var(--line); border-radius:50%; background:#fff; }
+    .logo-wrap img { display:block; width:100%; height:100%; padding:8px; object-fit:contain; }
+    .initials { display:grid; width:100%; height:100%; place-items:center; background:var(--raised); color:var(--accent); font-size:25px; font-weight:800; letter-spacing:-.04em; }
+    .closing { color:var(--text); font-size:14px; font-weight:650; }
+    .empty { margin:25px 0 0; padding:29px 18px; border:1px solid var(--line); border-radius:15px; background:var(--surface); color:var(--muted); text-align:center; }
+    .empty[hidden] { display:none; }
+    footer { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 18px; padding:20px 0 28px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
+    footer a { color:var(--muted); text-underline-offset:3px; }
+    footer a:hover { color:var(--accent); }
+    @keyframes pop { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+    @media(max-width:480px) { .shell { width:calc(100% - 28px); } .store-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .store-tile { min-height:155px; } }
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <a class="home" href="index.html">← Home</a>
+      <p class="eyebrow">Macquarie Centre · Sydney</p>
+      <h1>What's open now?</h1>
+      <p class="status" id="centre-status" aria-live="polite"></p>
+      <button class="check-button" id="check-now" type="button">What's open now? <span aria-hidden="true">↻</span></button>
+    </header>
+    <main>
+      <div class="store-grid" id="store-grid" aria-label="Stores open now"></div>
+      <p class="empty" id="empty-message" hidden>Nothing open right now</p>
+    </main>
+    <footer>
+      <a href="https://www.macquariecentre.com.au/centre-info/opening-hours" target="_blank" rel="noopener noreferrer">Hours from macquariecentre.com.au/centre-info/opening-hours</a>
+      <span>Last checked: <time id="last-checked">—</time></span>
+    </footer>
+  </div>
+  <script>
+    /* EDIT HOURS HERE. Use 24-hour HH:mm strings. 24:00 means midnight at the end of that day.
+       Per-store days may override weekdays, e.g. days: { Thu: "09:00-22:00", Sun: null } (null = closed). */
+    const CENTRE_HOURS = {
+      Mon: "09:30-18:00", Tue: "09:30-18:00", Wed: "09:30-18:00",
+      Thu: "09:30-21:00", Fri: "09:30-18:00", Sat: "09:00-18:00", Sun: "10:00-18:00"
+    };
+    const SPECIAL_DATES = {
+      "2026-11-27": "09:00-21:00", // Black Friday
+      "2026-11-28": "09:00-19:00",
+      "2026-11-29": "09:00-18:00",
+      "2026-11-30": "09:00-18:00"
+    };
+    const STORES = [
+      { name:"Aldi", initials:"A", hours:"08:30-20:00", independent:true, logo:"https://gptgroupretailer.imgix.net/getContentAsset/74e6d8b8-e1ab-483a-a335-4272b72d2c3a/93479c80-15d9-49ec-a442-167558b21428/StoreLogo_Aldi.png?auto=format&fit=max&w=460&h=460" },
+      { name:"Big W", initials:"BW", hours:"09:00-18:00", logo:"https://gptgroupretailer.imgix.net/getContentAsset/31daead7-2ba9-47bd-bb98-e71871d016af/93479c80-15d9-49ec-a442-167558b21428/untitled-(600-x-400-px).jpg?auto=format&fit=max&w=460&h=460" },
+      { name:"Coles", initials:"C", hours:"07:00-22:00", independent:true, logo:"https://gptgroupretailer.imgix.net/getContentAsset/c1564ebb-ee99-4597-abf6-cbbfa825eb09/93479c80-15d9-49ec-a442-167558b21428/Coles-Logo.jpg?auto=format&fit=max&w=460&h=460" },
+      { name:"David Jones", initials:"DJ", hours:"10:00-18:00", logo:"https://gptgroupretailer.imgix.net/getContentAsset/d31adf1e-00ce-41f9-b091-c8cd60319f9c/93479c80-15d9-49ec-a442-167558b21428/David-Jones-Logo.png?auto=format&fit=max&w=460&h=460" },
+      { name:"Event Cinemas", initials:"EC", hours:"10:00-24:00", independent:true, logo:"https://gptgroupretailer.imgix.net/getContentAsset/c5871762-c2e4-41aa-9255-b6cf7de64da4/93479c80-15d9-49ec-a442-167558b21428/Event-Logo.png?auto=format&fit=max&w=460&h=460" },
+      { name:"Holey Moley", initials:"HM", hours:"10:00-20:00", independent:true, logo:"https://gptgroupretailer.imgix.net/getContentAsset/d29ead1a-5f09-46ec-979c-491cc1dd02ad/93479c80-15d9-49ec-a442-167558b21428/Holey_Moley-Logo-Digital-Black-(11).png?auto=format&fit=max&w=460&h=460" },
+      { name:"Kmart", initials:"K", hours:"08:00-20:00", logo:"https://gptgroupretailer.imgix.net/getContentAsset/ce807bde-48cb-4450-b47c-0654a712db22/93479c80-15d9-49ec-a442-167558b21428/Kmart-Logo.png?auto=format&fit=max&w=460&h=460" },
+      { name:"Myer", initials:"M", hours:"10:00-18:00", logo:"https://gptgroupretailer.imgix.net/getContentAsset/72a0d6a7-343c-4930-8120-e30cf5b9b2d4/93479c80-15d9-49ec-a442-167558b21428/MYER_My_Store_Small_Stacked.jpg?auto=format&fit=max&w=460&h=460" },
+      { name:"Strike Bowling", initials:"SB", hours:"10:00-20:00", independent:true, logo:"https://gptgroupretailer.imgix.net/getContentAsset/d69d3544-400c-4e1a-96d6-e4ac91cbccc0/93479c80-15d9-49ec-a442-167558b21428/Untitled-design-(36).png?auto=format&fit=max&w=460&h=460" },
+      { name:"Timezone", initials:"T", hours:"09:00-22:00", independent:true, logo:"https://gptgroupretailer.imgix.net/getContentAsset/6ccf51f0-b0df-4e59-b631-b08d8631eb96/93479c80-15d9-49ec-a442-167558b21428/Timezone-Logo.png?auto=format&fit=max&w=460&h=460" },
+      { name:"Woolworths", initials:"W", hours:"07:00-23:00", independent:true, logo:"https://gptgroupretailer.imgix.net/getContentAsset/cdede756-25cb-4acd-a407-339f5d3399b3/93479c80-15d9-49ec-a442-167558b21428/woolworths-logo.png?auto=format&fit=max&w=460&h=460" }
+    ];
+
+    const TIME_ZONE = "Australia/Sydney";
+    const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const clockFormat = new Intl.DateTimeFormat("en-AU", { timeZone: TIME_ZONE, hour:"2-digit", minute:"2-digit", hourCycle:"h23" });
+    const dateFormat = new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE, year:"numeric", month:"2-digit", day:"2-digit" });
+    const statusEl = document.getElementById("centre-status");
+    const gridEl = document.getElementById("store-grid");
+    const emptyEl = document.getElementById("empty-message");
+
+    function zonedParts(date) {
+      const parts = Object.fromEntries(new Intl.DateTimeFormat("en-AU", { timeZone:TIME_ZONE, year:"numeric", month:"2-digit", day:"2-digit", weekday:"short", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }).formatToParts(date).filter(p => p.type !== "literal").map(p => [p.type, p.value]));
+      const year = Number(parts.year), month = Number(parts.month), day = Number(parts.day);
+      return { year, month, day, dateKey:`${parts.year}-${parts.month}-${parts.day}`, weekday:parts.weekday, minutes:Number(parts.hour)*60+Number(parts.minute), dayNumber:Math.floor(Date.UTC(year, month-1, day)/86400000) };
+    }
+    function keyForDay(dayNumber) {
+      const date = new Date(dayNumber * 86400000);
+      return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,"0")}-${String(date.getUTCDate()).padStart(2,"0")}`;
+    }
+    function weekdayForDay(dayNumber) { return DAY_NAMES[new Date(dayNumber * 86400000).getUTCDay()]; }
+    function parseRange(range) {
+      if (!range) return null;
+      const match = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/.exec(range);
+      if (!match) return null;
+      const start = Number(match[1])*60+Number(match[2]);
+      const endRaw = Number(match[3])*60+Number(match[4]);
+      if (start >= 1440 || endRaw > 1440 || Number(match[2]) > 59 || Number(match[4]) > 59) return null;
+      const end = endRaw === 1440 ? 1440 : endRaw <= start ? endRaw + 1440 : endRaw;
+      return { start, end };
+    }
+    function centreRangeFor(dayNumber) {
+      const key = keyForDay(dayNumber);
+      const range = Object.prototype.hasOwnProperty.call(SPECIAL_DATES, key) ? SPECIAL_DATES[key] : CENTRE_HOURS[weekdayForDay(dayNumber)];
+      return parseRange(range);
+    }
+    function storeRangeFor(store, dayNumber) {
+      const weekday = weekdayForDay(dayNumber);
+      const range = store.days && Object.prototype.hasOwnProperty.call(store.days, weekday) ? store.days[weekday] : store.hours;
+      return parseRange(range);
+    }
+    function getInterval(dayNumber, range) { return range ? { start:dayNumber*1440+range.start, end:dayNumber*1440+range.end } : null; }
+    function openIntervalAt(dayNumber, range, nowMinute) {
+      const interval = getInterval(dayNumber, range);
+      return interval && nowMinute >= interval.start && nowMinute < interval.end ? interval : null;
+    }
+    function centreStatus(now) {
+      const today = now.dayNumber;
+      const current = today*1440+now.minutes;
+      const todayInterval = openIntervalAt(today, centreRangeFor(today), current);
+      const yesterdayInterval = openIntervalAt(today-1, centreRangeFor(today-1), current);
+      const openInterval = [todayInterval, yesterdayInterval].filter(Boolean).sort((a,b)=>a.end-b.end)[0];
+      if (openInterval) return { open:true, interval:openInterval, text:`Centre open · closes ${formatMinute(openInterval.end)}` };
+      for (let offset=0; offset<=8; offset++) {
+        const day = today+offset; const range = centreRangeFor(day); if (!range) continue;
+        const start = day*1440+range.start;
+        if (start > current) return { open:false, interval:null, text:`Centre closed · opens ${formatMinute(start)}${offset===0 ? "" : offset===1 ? " tomorrow" : ` on ${formatDay(day)}`}` };
+      }
+      return { open:false, interval:null, text:"Centre closed" };
+    }
+    function formatMinute(absoluteMinute) {
+      const dayNumber = Math.floor(absoluteMinute/1440);
+      const minuteOfDay = absoluteMinute-dayNumber*1440;
+      const date = new Date(dayNumber*86400000 + minuteOfDay*60000);
+      return new Intl.DateTimeFormat("en-AU", { timeZone:"UTC", hour:"numeric", minute:"2-digit" }).format(date).replace(/\s/g, "").toUpperCase();
+    }
+    function formatDay(dayNumber) {
+      return new Intl.DateTimeFormat("en-AU", { timeZone:"UTC", weekday:"long", day:"numeric", month:"short" }).format(new Date(dayNumber*86400000));
+    }
+    function openStoreInterval(store, now) {
+      const current = now.dayNumber*1440+now.minutes;
+      const intervals = [now.dayNumber-1, now.dayNumber].map(day => openIntervalAt(day, storeRangeFor(store, day), current)).filter(Boolean);
+      return intervals.sort((a,b)=>a.end-b.end)[0] || null;
+    }
+    function render() {
+      const checkedAt = new Date();
+      const now = zonedParts(checkedAt);
+      const centre = centreStatus(now);
+      statusEl.textContent = centre.text;
+      statusEl.className = `status ${centre.open ? "open" : "closed"}`;
+      const current = now.dayNumber*1440+now.minutes;
+      const openStores = STORES.map(store => {
+        const interval = openStoreInterval(store, now);
+        if (!interval || (!store.independent && !centre.open)) return null;
+        return { store, close:interval.end };
+      }).filter(Boolean).sort((a,b)=>a.close-b.close || a.store.name.localeCompare(b.store.name));
+      gridEl.replaceChildren();
+      for (const {store, close} of openStores) {
+        const tile = document.createElement("div"); tile.className = "store-tile";
+        const logoWrap = document.createElement("span"); logoWrap.className = "logo-wrap"; logoWrap.title = store.name; logoWrap.setAttribute("aria-label", store.name);
+        const img = document.createElement("img"); img.src = store.logo; img.alt = store.name; img.title = store.name; img.loading = "lazy";
+        img.addEventListener("error", () => { logoWrap.replaceChildren(); const initials = document.createElement("span"); initials.className = "initials"; initials.textContent = store.initials; initials.title = store.name; initials.setAttribute("aria-label", store.name); logoWrap.append(initials); }, { once:true });
+        logoWrap.append(img);
+        const closing = document.createElement("span"); closing.className = "closing"; closing.textContent = `Closes ${formatMinute(close)}`;
+        tile.append(logoWrap, closing); gridEl.append(tile);
+      }
+      emptyEl.hidden = openStores.length !== 0;
+      document.getElementById("last-checked").textContent = clockFormat.format(checkedAt).replace(/\s/g, "").toUpperCase();
+      document.getElementById("last-checked").dateTime = checkedAt.toISOString();
+    }
+    document.getElementById("check-now").addEventListener("click", render);
+    render();
+  </script>
+</body>
+</html>
